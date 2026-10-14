@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>راکتور همجوشی کوانتومی | شبیه‌ساز سه‌بعدی مهندسی</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Vazirmatn (Persian) & JetBrains Mono (Telemetry) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+    <!-- Three.js Import Map (v0.160.0) -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <style>
+        :root {
+            --theme-color: #00f2fe;
+            --theme-glow: rgba(0, 242, 254, 0.35);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #04070d;
+            font-family: 'Vazirmatn', sans-serif;
+            color: #e2e8f0;
+        }
+
+        .font-mono-tech {
+            font-family: 'JetBrains Mono', monospace;
+            direction: ltr;
+            display: inline-block;
+        }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: rgba(10, 16, 28, 0.72);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(255, 255, 255, 0.16);
+        }
+
+        /* Custom Range Sliders */
+        input[type="range"].cyber-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 999px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"].cyber-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--theme-color);
+            box-shadow: 0 0 12px var(--theme-color), 0 0 4px #ffffff;
+            border: 2px solid #ffffff;
+            cursor: pointer;
+            transition: transform 0.15s ease;
+        }
+
+        input[type="range"].cyber-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Active Mode Button */
+        .btn-mode.active {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: var(--theme-color);
+            color: #ffffff;
+            box-shadow: 0 0 15px var(--theme-glow);
+        }
+
+        /* Subtle Scanline Overlay */
+        .scanlines {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0, 0, 0, 0.12) 50%,
+                rgba(0, 0, 0, 0.12)
+            );
+            background-size: 100% 4px;
+        }
+
+        /* Custom Scrollbar for side panels on small screens */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 999px;
+        }
+    </style>
+</head>
+<body class="relative w-full h-full select-none">
+
+    <!-- 3D WebGL Canvas Container -->
+    <div id="canvas-container" class="absolute inset-0 w-full h-full z-0 cursor-grab active:cursor-grabbing"></div>
+
+    <!-- Subtle Vignette & Sci-Fi Grid Overlay (Non-blocking) -->
+    <div class="pointer-events-none fixed inset-0 z-10 scanlines opacity-30"></div>
+    <div class="pointer-events-none fixed inset-0 z-10 bg-[radial-gradient(circle_at_center,transparent_50%,rgba(2,5,12,0.75)_100%)]"></div>
+
+    <!-- TOP NAVIGATION & STATUS BAR -->
+    <header class="fixed top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+        <!-- Brand & Reactor Title -->
+        <div class="glass-panel pointer-events-auto px-4 py-2.5 rounded-2xl flex items-center gap-3.5">
+            <div class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-400/30">
+                <span id="status-ping" class="animate-ping absolute inline-flex h-5 w-5 rounded-full bg-cyan-400 opacity-40"></span>
+                <svg class="w-6 h-6 text-cyan-400" id="header-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+                </svg>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-sm sm:text-base font-black tracking-tight text-white">راکتور همجوشی کوانتومی</h1>
+                    <span class="text-[10px] font-mono-tech uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">MK-IX CORE</span>
+                </div>
+                <p class="text-[11px] text-slate-400 hidden sm:block">شبیه‌ساز مهندسی سه‌بعدی با رندر بلادرنگ WebGL و شیدر پلاسما</p>
+            </div>
+        </div>
+
+        <!-- Quick Action Toolbar -->
+        <div class="glass-panel pointer-events-auto px-3 py-2 rounded-2xl flex items-center gap-2">
+            <button id="btn-pulse" class="px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/30 text-xs font-bold text-cyan-200 transition flex items-center gap-1.5" title="ارسال موج شوک انرژی">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span>شوک پلاسما</span>
+            </button>
+            <button id="btn-autorotate" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-medium text-white transition" title="چرخش خودکار دوربین">
+                چرخش خودکار: روشن
+            </button>
+            <button id="btn-toggle-ui" class="p-1.5 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-slate-300 transition" title="مخفی/نمایش پنل‌ها">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- RIGHT PANEL: ENGINEERING CONTROLS -->
+    <aside id="panel-controls" class="fixed top-20 right-3 z-20 w-72 sm:w-80 max-h-[calc(100vh-6.5rem)] overflow-y-auto glass-panel rounded-2xl p-4 flex flex-col gap-4">
+        <div class="flex items-center justify-between border-b border-white/10 pb-2.5">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                <h2 class="text-xs font-bold text-white tracking-wide">پنل کنترل مهندسی</h2>
+            </div>
+            <button id="btn-quick-explode" class="text-[11px] px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-cyan-300 font-medium transition">
+                باز کردن قطعات
+            </button>
+        </div>
+
+        <!-- Exploded View Slider -->
+        <div class="space-y-1.5">
+            <div class="flex justify-between text-xs">
+                <label for="slider-explode" class="text-slate-300 font-medium">نمای انفجاری (Exploded View)</label>
+                <span id="val-explode" class="font-mono-tech text-cyan-400 font-bold">0%</span>
+            </div>
+            <input id="slider-explode" type="range" min="0" max="100" value="0" class="cyber-slider">
+            <p class="text-[10px] text-slate-400 leading-relaxed">جداسازی لایه‌های زره، سیم‌پیچ‌های استاتور و حلقه‌های ژیروسکوپ برای بررسی ساختار داخلی</p>
+        </div>
+
+        <!-- Core Power / Overdrive Slider -->
+        <div class="space-y-1.5">
+            <div class="flex justify-between text-xs">
+                <label for="slider-power" class="text-slate-300 font-medium">توان هسته (Core Overdrive)</label>
+                <span id="val-power" class="font-mono-tech text-cyan-400 font-bold">100%</span>
+            </div>
+            <input id="slider-power" type="range" min="10" max="250" value="100" class="cyber-slider">
+        </div>
+
+        <!-- Bloom Intensity Slider -->
+        <div class="space-y-1.5">
+            <div class="flex justify-between text-xs">
+                <label for="slider-bloom" class="text-slate-300 font-medium">شدت درخشش نئون (Bloom)</label>
+                <span id="val-bloom" class="font-mono-tech text-cyan-400 font-bold">1.15</span>
+            </div>
+            <input id="slider-bloom" type="range" min="0" max="250" value="115" class="cyber-slider">
+        </div>
+
+        <!-- Render Mode Switcher -->
+        <div class="space-y-2 pt-1 border-t border-white/10">
+            <span class="text-xs text-slate-300 font-medium block">حالت نمایش و متریال (Render Mode)</span>
+            <div class="grid grid-cols-3 gap-1.5">
+                <button data-mode="pbr" class="btn-mode active py-2 px-2 rounded-xl border border-white/10 bg-white/5 text-[11px] font-medium text-slate-300 transition text-center">
+                    واقع‌گرایانه
+                </button>
+                <button data-mode="wireframe" class="btn-mode py-2 px-2 rounded-xl border border-white/10 bg-white/5 text-[11px] font-medium text-slate-300 transition text-center">
+                    شبکه سیمی
+                </button>
+                <button data-mode="xray" class="btn-mode py-2 px-2 rounded-xl border border-white/10 bg-white/5 text-[11px] font-medium text-slate-300 transition text-center">
+                    اشعه ایکس
+                </button>
+            </div>
+        </div>
+
+        <!-- Layer Visibility Checkboxes -->
+        <div class="space-y-2 pt-1 border-t border-white/10">
+            <span class="text-xs text-slate-300 font-medium block">فیلتر لایه‌های مکانیکی</span>
+            <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+                <label class="flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:bg-white/10 transition">
+                    <input type="checkbox" checked data-layer="stator" class="layer-toggle accent-cyan-400 rounded">
+                    <span>استاتور و سیم‌پیچ‌ها</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:bg-white/10 transition">
+                    <input type="checkbox" checked data-layer="gyros" class="layer-toggle accent-cyan-400 rounded">
+                    <span>حلقه‌های ژیروسکوپ</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:bg-white/10 transition">
+                    <input type="checkbox" checked data-layer="injectors" class="layer-toggle accent-cyan-400 rounded">
+                    <span>انژکتورهای قطبی</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:bg-white/10 transition">
+                    <input type="checkbox" checked data-layer="core" class="layer-toggle accent-cyan-400 rounded">
+                    <span>هسته پلاسما</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Color Theme Presets -->
+        <div class="space-y-2 pt-1 border-t border-white/10">
+            <span class="text-xs text-slate-300 font-medium block">طیف انرژی پلاسما</span>
+            <div class="grid grid-cols-4 gap-2">
+                <button data-theme="cyan" class="theme-btn group relative h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 border-2 border-white shadow-lg transition transform hover:scale-105" title="سیان کوانتومی"></button>
+                <button data-theme="gold" class="theme-btn group relative h-8 rounded-xl bg-gradient-to-br from-amber-300 to-orange-600 border-2 border-transparent opacity-80 hover:opacity-100 transition transform hover:scale-105" title="پلاسمای طلایی"></button>
+                <button data-theme="crimson" class="theme-btn group relative h-8 rounded-xl bg-gradient-to-br from-rose-400 to-purple-700 border-2 border-transparent opacity-80 hover:opacity-100 transition transform hover:scale-105" title="انرژی ارجوانی"></button>
+                <button data-theme="emerald" class="theme-btn group relative h-8 rounded-xl bg-gradient-to-br from-emerald-300 to-teal-700 border-2 border-transparent opacity-80 hover:opacity-100 transition transform hover:scale-105" title="زمرد نئونی"></button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- LEFT PANEL: LIVE TELEMETRY & CAMERA PRESETS -->
+    <aside id="panel-telemetry" class="fixed top-20 left-3 z-20 w-64 sm:w-72 glass-panel rounded-2xl p-4 hidden md:flex flex-col gap-4">
+        <div class="flex items-center justify-between border-b border-white/10 pb-2.5">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <h2 class="text-xs font-bold text-white tracking-wide">تله‌متری زنده راکتور</h2>
+            </div>
+            <span id="fps-counter" class="text-[11px] font-mono-tech text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">60 FPS</span>
+        </div>
+
+        <!-- Telemetry Metrics Grid -->
+        <div class="grid grid-cols-2 gap-2.5">
+            <div class="p-2.5 rounded-xl bg-white/5 border border-white/5">
+                <span class="text-[10px] text-slate-400 block">خروجی حرارتی</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                    <span id="tele-mw" class="text-base font-bold font-mono-tech text-white">1,420</span>
+                    <span class="text-[10px] font-mono-tech text-cyan-400">MW</span>
+                </div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-white/5 border border-white/5">
+                <span class="text-[10px] text-slate-400 block">شار مغناطیسی</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                    <span id="tele-tesla" class="text-base font-bold font-mono-tech text-white">48.6</span>
+                    <span class="text-[10px] font-mono-tech text-cyan-400">T</span>
+                </div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-white/5 border border-white/5">
+                <span class="text-[10px] text-slate-400 block">چرخش ژیروسکوپ</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                    <span id="tele-rpm" class="text-base font-bold font-mono-tech text-white">12,800</span>
+                    <span class="text-[10px] font-mono-tech text-cyan-400">RPM</span>
+                </div>
+            </div>
+            <div class="p-2.5 rounded-xl bg-white/5 border border-white/5">
+                <span class="text-[10px] text-slate-400 block">دمای هسته</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                    <span id="tele-temp" class="text-base font-bold font-mono-tech text-white">154.2</span>
+                    <span class="text-[10px] font-mono-tech text-cyan-400">MK</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Geometry Stats -->
+        <div class="px-3 py-2 rounded-xl bg-slate-900/70 border border-white/5 flex items-center justify-between text-[11px]">
+            <span class="text-slate-400">تعداد مثلث‌های سه‌بعدی:</span>
+            <span id="poly-count" class="font-mono-tech text-slate-200 font-semibold">---</span>
+        </div>
+
+        <!-- Camera Presets -->
+        <div class="space-y-2 pt-1 border-t border-white/10">
+            <span class="text-xs text-slate-300 font-medium block">زوایای استاندارد دوربین</span>
+            <div class="grid grid-cols-2 gap-1.5">
+                <button data-cam="overview" class="cam-btn py-2 px-2.5 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] text-slate-200 transition text-center">
+                    نمای کلی ایزومتریک
+                </button>
+                <button data-cam="core" class="cam-btn py-2 px-2.5 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] text-slate-200 transition text-center">
+                    نمای نزدیک هسته
+                </button>
+                <button data-cam="polar" class="cam-btn py-2 px-2.5 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] text-slate-200 transition text-center">
+                    نمای قطبی (بالا)
+                </button>
+                <button data-cam="side" class="cam-btn py-2 px-2.5 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] text-slate-200 transition text-center">
+                    نمای مقطع جانبی
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- BOTTOM INTERACTIVE PART INSPECTOR & HELP PILL -->
+    <footer id="panel-footer" class="fixed bottom-3 left-3 right-3 z-20 flex flex-col sm:flex-row items-center justify-between gap-2 pointer-events-none">
+        <!-- Hovered Part Inspector -->
+        <div class="glass-panel pointer-events-auto px-4 py-2 rounded-2xl flex items-center gap-3 max-w-md w-full sm:w-auto">
+            <div class="w-2.5 h-2.5 rounded-full bg-cyan-400 shrink-0" id="inspector-dot"></div>
+            <div class="truncate">
+                <span class="text-[10px] text-slate-400 block">قطعه انتخابی / نشانگر ماوس:</span>
+                <p id="inspector-text" class="text-xs font-bold text-white truncate">ماوس را روی اجزای راکتور ببرید تا مشخصات فنی نمایش داده شود</p>
+            </div>
+        </div>
+
+        <!-- Navigation Hint -->
+        <div class="glass-panel pointer-events-auto px-4 py-2 rounded-2xl hidden lg:flex items-center gap-4 text-[11px] text-slate-300">
+            <span>🖱️ <b>کلیک چپ + حرکت:</b> چرخش ۳۶۰ درجه</span>
+            <span>🔍 <b>اسکرول:</b> بزرگ‌نمایی</span>
+            <span>✋ <b>کلیک راست:</b> جابه‌جایی</span>
+        </div>
+    </footer>
+
+    <!-- MAIN THREE.JS APPLICATION LOGIC -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // ==========================================
+        // 1. STATE & THEME CONFIGURATION
+        // ==========================================
+        const state = {
+            explodeTarget: 0.0,
+            explodeCurrent: 0.0,
+            powerLevel: 1.0,
+            bloomStrength: 1.15,
+            pulseEnergy: 0.0,
+            autoRotate: true,
+            renderMode: 'pbr', // 'pbr' | 'wireframe' | 'xray'
+            activeTheme: 'cyan',
+            cameraLerpActive: false,
+            cameraTargetPos: new THREE.Vector3(9.5, 5.5, 11.5),
+            cameraTargetLook: new THREE.Vector3(0, 0, 0)
+        };
+
+        const themes = {
+            cyan: {
+                primary: new THREE.Color(0x00f2fe),
+                secondary: new THREE.Color(0x0066ff),
+                cssHex: '#00f2fe',
+                cssGlow: 'rgba(0, 242, 254, 0.35)'
+            },
+            gold: {
+                primary: new THREE.Color(0xffaa00),
+                secondary: new THREE.Color(0xff3300),
+                cssHex: '#ffaa00',
+                cssGlow: 'rgba(255, 170, 0, 0.35)'
+            },
+            crimson: {
+                primary: new THREE.Color(0xff1e6b),
+                secondary: new THREE.Color(0x7928ca),
+                cssHex: '#ff1e6b',
+                cssGlow: 'rgba(255, 30, 107, 0.35)'
+            },
+            emerald: {
+                primary: new THREE.Color(0x00ff87),
+                secondary: new THREE.Color(0x00b4d8),
+                cssHex: '#00ff87',
+                cssGlow: 'rgba(0, 255, 135, 0.35)'
+            }
+        };
+
+        // ==========================================
+        // 2. SCENE, CAMERA, RENDERER & BLOOM SETUP
+        // ==========================================
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x04070d);
+        scene.fog = new THREE.FogExp2(0x04070d, 0.025);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+        camera.position.set(10.5, 6.2, 12.0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
+        container.appendChild(renderer.domElement);
+
+        // Procedural Studio HDRI Reflections via RoomEnvironment
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+        scene.environmentIntensity = 0.85;
+
+        // Post-Processing Composer (UnrealBloomPass)
+        const renderScene = new RenderPass(scene, camera);
+        const bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            state.bloomStrength, // strength
+            0.55,                // radius
+            0.22                 // threshold
+        );
+
+        const composer = new EffectComposer(renderer);
+        composer.addPass(renderScene);
+        composer.addPass(bloomPass);
+
+        // Orbit Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxDistance = 32;
+        controls.minDistance = 2.6;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.9;
+
+        // Stop camera preset transition if user interacts manually
+        controls.addEventListener('start', () => {
+            state.cameraLerpActive = false;
+        });
+
+        // ==========================================
+        // 3. LIGHTING SYSTEM
+        // ==========================================
+        const coreLight = new THREE.PointLight(0x00f2fe, 18, 22, 1.5);
+        scene.add(coreLight);
+
+        const topSpot = new THREE.SpotLight(0xffffff, 25);
+        topSpot.position.set(8, 18, 8);
+        topSpot.angle = Math.PI / 4;
+        topSpot.penumbra = 0.8;
+        scene.add(topSpot);
+
+        const rimLight = new THREE.DirectionalLight(0x3b82f6, 2.5);
+        rimLight.position.set(-12, -8, -10);
+        scene.add(rimLight);
+
+        // ==========================================
+        // 4. SHARED MATERIALS & CUSTOM GLSL SHADER
+        // ==========================================
+        const standardMaterials = [];
+        const emissivePrimaryMaterials = [];
+        const emissiveSecondaryMaterials = [];
+
+        function createPBRMaterial(config) {
+            const mat = new THREE.MeshPhysicalMaterial(config);
+            mat.userData.origConfig = {
+                transparent: config.transparent || false,
+                opacity: config.opacity !== undefined ? config.opacity : 1.0,
+                roughness: config.roughness,
+                metalness: config.metalness
+            };
+            standardMaterials.push(mat);
+            return mat;
+        }
+
+        // Metallic & Industrial Materials
+        const matDarkTitanium = createPBRMaterial({
+            color: 0x1a2230,
+            metalness: 0.9,
+            roughness: 0.26,
+            clearcoat: 0.35,
+            clearcoatRoughness: 0.2
+        });
+
+        const matBrushedSteel = createPBRMaterial({
+            color: 0x8a99ad,
+            metalness: 0.95,
+            roughness: 0.18
+        });
+
+        const matCopperCoil = createPBRMaterial({
+            color: 0xd97736,
+            metalness: 0.92,
+            roughness: 0.22,
+            clearcoat: 0.2
+        });
+
+        const matArmorCarbon = createPBRMaterial({
+            color: 0x0f141d,
+            metalness: 0.65,
+            roughness: 0.45,
+            clearcoat: 0.5
+        });
+
+        const matGlassContainment = new THREE.MeshPhysicalMaterial({
+            color: 0xffffff,
+            metalness: 0.05,
+            roughness: 0.08,
+            transmission: 0.88,
+            ior: 1.52,
+            transparent: true,
+            opacity: 0.95,
+            side: THREE.DoubleSide
+        });
+
+        // Glowing Neon Materials
+        const matGlowPrimary = new THREE.MeshStandardMaterial({
+            color: 0x00f2fe,
+            emissive: 0x00f2fe,
+            emissiveIntensity: 3.2,
+            roughness: 0.2
+        });
+        emissivePrimaryMaterials.push(matGlowPrimary);
+
+        const matGlowSecondary = new THREE.MeshStandardMaterial({
+            color: 0x0066ff,
+            emissive: 0x0066ff,
+            emissiveIntensity: 2.0,
+            roughness: 0.3
+        });
+        emissiveSecondaryMaterials.push(matGlowSecondary);
+
+        // Custom GLSL Plasma Core Shader
+        const plasmaUniforms = {
+            uTime: { value: 0 },
+            uPower: { value: 1.0 },
+            uColorPrimary: { value: new THREE.Color(0x00f2fe) },
+            uColorSecondary: { value: new THREE.Color(0x0044ff) }
+        };
+
+        const plasmaShaderMaterial = new THREE.ShaderMaterial({
+            uniforms: plasmaUniforms,
+            transparent: true,
+            vertexShader: `
+                varying vec3 vNormal;
+                varying vec3 vPosition;
+                varying vec3 vViewPosition;
+                uniform float uTime;
+                uniform float uPower;
+
+                // Simple 3D trigonometric turbulence displacement
+                float wave(vec3 p) {
+                    return sin(p.x * 4.0 + uTime * 3.0) * cos(p.y * 4.0 - uTime * 2.5) * sin(p.z * 4.0 + uTime * 3.5);
+                }
+
+                void main() {
+                    vNormal = normalize(normalMatrix * normal);
+                    float displacement = wave(position) * 0.07 * uPower;
+                    vec3 displacedPos = position + normal * displacement;
+                    vPosition = displacedPos;
+
+                    vec4 mvPosition = modelViewMatrix * vec4(displacedPos, 1.0);
+                    vViewPosition = -mvPosition.xyz;
+                    gl_Position = projectionMatrix * mvPosition;
+                }
+            `,
+            fragmentShader: `
+                varying vec3 vNormal;
+                varying vec3 vPosition;
+                varying vec3 vViewPosition;
+                uniform float uTime;
+                uniform float uPower;
+                uniform vec3 uColorPrimary;
+                uniform vec3 uColorSecondary;
+
+                // Procedural multi-octave plasma pattern
+                float plasmaPattern(vec3 p) {
+                    float v = 0.0;
+                    v += sin((p.x + uTime * 1.2) * 5.0);
+                    v += sin((p.y - uTime * 1.5) * 5.0);
+                    v += sin((p.z + uTime * 0.9) * 5.0);
+                    v += sin(length(p * 4.0) - uTime * 4.0);
+                    return v * 0.25;
+                }
+
+                void main() {
+                    vec3 normal = normalize(vNormal);
+                    vec3 viewDir = normalize(vViewPosition);
+
+                    // Fresnel Rim Glow
+                    float fresnel = pow(1.0 - abs(dot(normal, viewDir)), 2.2);
+
+                    // Swirling internal plasma filaments
+                    float p1 = plasmaPattern(vPosition * 1.4);
+                    float p2 = plasmaPattern(vPosition * 2.8 + vec3(p1));
+                    float filaments = smoothstep(-0.2, 0.7, p2);
+
+                    vec3 baseColor = mix(uColorSecondary, uColorPrimary, filaments);
+                    vec3 hotCore = mix(baseColor, vec3(1.0, 1.0, 1.0), pow(filaments, 3.0) * 0.85);
+                    vec3 finalColor = (hotCore + uColorPrimary * fresnel * 1.8) * (1.2 + uPower * 0.7);
+
+                    gl_FragColor = vec4(finalColor, 0.96);
+                }
+            `
+        });
+
+        // ==========================================
+        // 5. PROCEDURAL GEOMETRY BUILDER & EXPLODE SYSTEM
+        // ==========================================
+        const reactorRoot = new THREE.Group();
+        scene.add(reactorRoot);
+
+        // Layer groups for visibility toggling
+        const layers = {
+            core: new THREE.Group(),
+            gyros: new THREE.Group(),
+            injectors: new THREE.Group(),
+            stator: new THREE.Group()
+        };
+        reactorRoot.add(layers.core, layers.gyros, layers.injectors, layers.stator);
+
+        const explodableParts = [];
+        const interactiveMeshes = [];
+
+        /**
+         * Registers a 3D Object/Group to participate in the Exploded View animation
+         * and Raycast part inspection.
+         */
+        function registerExplodable(obj, explodeDir, explodeDist, partTitle) {
+            obj.userData.basePos = obj.position.clone();
+            obj.userData.explodeDir = explodeDir.clone().normalize();
+            obj.userData.explodeDist = explodeDist;
+            obj.userData.partTitle = partTitle;
+            explodableParts.push(obj);
+
+            obj.traverse((child) => {
+                if (child.isMesh) {
+                    child.userData.partTitle = partTitle;
+                    interactiveMeshes.push(child);
+                }
+            });
+        }
+
+        // ------------------------------------------
+        // A. CENTRAL PLASMA CORE & GEODESIC CAGE
+        // ------------------------------------------
+        const coreAssembly = new THREE.Group();
+        layers.core.add(coreAssembly);
+
+        // 1. Swirling Plasma Sphere
+        const plasmaGeo = new THREE.IcosahedronGeometry(1.12, 8);
+        const plasmaMesh = new THREE.Mesh(plasmaGeo, plasmaShaderMaterial);
+        plasmaMesh.userData.partTitle = 'هسته همجوشی پلاسمای کوانتومی (دمای ۱۵۰ میلیون کلوین)';
+        interactiveMeshes.push(plasmaMesh);
+        coreAssembly.add(plasmaMesh);
+
+        // 2. Inner Geodesic Lattice Cage (Splits into 2 hemispheres on explode)
+        const cageTop = new THREE.Group();
+        const cageBottom = new THREE.Group();
+        coreAssembly.add(cageTop, cageBottom);
+
+        const icoCageGeo = new THREE.IcosahedronGeometry(1.38, 1);
+        const cageEdges = new THREE.EdgesGeometry(icoCageGeo);
+        const posAttr = cageEdges.attributes.position;
+
+        for (let i = 0; i < posAttr.count; i += 2) {
+            const v1 = new THREE.Vector3().fromBufferAttribute(posAttr, i);
+            const v2 = new THREE.Vector3().fromBufferAttribute(posAttr, i + 1);
+            const mid = new THREE.Vector3().addVectors(v1, v2).multiplyScalar(0.5);
+            const len = v1.distanceTo(v2);
+
+            const strutGeo = new THREE.CylinderGeometry(0.025, 0.025, len, 8);
+            const strut = new THREE.Mesh(strutGeo, matBrushedSteel);
+            strut.position.copy(mid);
+            strut.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), v2.clone().sub(v1).normalize());
+
+            if (mid.y >= 0) cageTop.add(strut);
+            else cageBottom.add(strut);
+        }
+
+        // Glass Containment Shells (Upper & Lower Domes)
+        const domeGeoTop = new THREE.SphereGeometry(1.52, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.46);
+        const domeTopMesh = new THREE.Mesh(domeGeoTop, matGlassContainment);
+        cageTop.add(domeTopMesh);
+
+        const domeGeoBot = new THREE.SphereGeometry(1.52, 32, 16, 0, Math.PI * 2, Math.PI * 0.54, Math.PI * 0.46);
+        const domeBotMesh = new THREE.Mesh(domeGeoBot, matGlassContainment);
+        cageBottom.add(domeBotMesh);
+
+        registerExplodable(cageTop, new THREE.Vector3(0, 1, 0), 1.4, 'قفس ژئودزیک و گنبد محافظ نیم‌کره شمالی هسته');
+        registerExplodable(cageBottom, new THREE.Vector3(0, -1, 0), 1.4, 'قفس ژئودزیک و گنبد محافظ نیم‌کره جنوبی هسته');
+
+        // ------------------------------------------
+        // B. POLAR PLASMA INJECTORS (TOP & BOTTOM)
+        // ------------------------------------------
+        function createPolarInjector(isTop) {
+            const sign = isTop ? 1 : -1;
+            const injectorGroup = new THREE.Group();
+            injectorGroup.position.set(0, sign * 2.15, 0);
+            if (!isTop) injectorGroup.rotation.x = Math.PI;
+
+            // Main housing cylinder
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.35, 1.3, 16), matDarkTitanium);
+            injectorGroup.add(body);
+
+            // Glowing plasma nozzle tip pointing toward the core
+            const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.12, 0.6, 16), matBrushedSteel);
+            nozzle.position.y = -0.75;
+            injectorGroup.add(nozzle);
+
+            const emitterTip = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.045, 12, 24), matGlowPrimary);
+            emitterTip.rotation.x = Math.PI / 2;
+            emitterTip.position.y = -1.02;
+            injectorGroup.add(emitterTip);
+
+            // 3 Concentric Copper Cooling Rings
+            for (let i = 0; i < 3; i++) {
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(0.52 + i * 0.07, 0.04, 12, 24), matCopperCoil);
+                ring.rotation.x = Math.PI / 2;
+                ring.position.y = -0.3 + i * 0.28;
+                injectorGroup.add(ring);
+            }
+
+            // 6 Radial Stabilizer Fins
+            for (let i = 0; i < 6; i++) {
+                const angle = (i / 6) * Math.PI * 2;
+                const fin = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.95, 0.45), matArmorCarbon);
+                fin.position.set(Math.cos(angle) * 0.65, 0.05, Math.sin(angle) * 0.65);
+                fin.rotation.y = -angle;
+                injectorGroup.add(fin);
+            }
+
+            layers.injectors.add(injectorGroup);
+            registerExplodable(
+                injectorGroup,
+                new THREE.Vector3(0, sign, 0),
+                2.8,
+                isTop ? 'انژکتور متمرکزکننده پلاسمای قطب شمال' : 'انژکتور متمرکزکننده پلاسمای قطب جنوب'
+            );
+            return injectorGroup;
+        }
+
+        const topInjector = createPolarInjector(true);
+        const bottomInjector = createPolarInjector(false);
+
+        // ------------------------------------------
+        // C. 3 CONCENTRIC ARTICULATED GYROSCOPIC RINGS
+        // ------------------------------------------
+        function createSegmentedGyroRing(radius, tubeRadius, segmentsCount, explodeRadius, title) {
+            const gyroContainer = new THREE.Group();
+            layers.gyros.add(gyroContainer);
+
+            // Base structural inner stainless track
+            const track = new THREE.Mesh(
+                new THREE.TorusGeometry(radius, tubeRadius * 0.45, 16, 72),
+                matBrushedSteel
+            );
+            gyroContainer.add(track);
+
+            // Twin glowing neon energy conduits alongside the track
+            const conduit1 = new THREE.Mesh(
+                new THREE.TorusGeometry(radius, tubeRadius * 0.16, 12, 72),
+                matGlowPrimary
+            );
+            conduit1.position.z = tubeRadius * 0.55;
+            gyroContainer.add(conduit1);
+
+            const conduit2 = conduit1.clone();
+            conduit2.position.z = -tubeRadius * 0.55;
+            gyroContainer.add(conduit2);
+
+            // Modular Armor Clamps & Induction Blocks distributed around the ring
+            // Each segment explodes radially outward!
+            for (let i = 0; i < segmentsCount; i++) {
+                const angle = (i / segmentsCount) * Math.PI * 2;
+                const segGroup = new THREE.Group();
+
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                segGroup.position.set(x, y, 0);
+                segGroup.rotation.z = angle;
+
+                // Heavy titanium clamp block
+                const clamp = new THREE.Mesh(
+                    new THREE.BoxGeometry(tubeRadius * 2.2, tubeRadius * 3.1, tubeRadius * 2.0),
+                    i % 2 === 0 ? matDarkTitanium : matArmorCarbon
+                );
+                segGroup.add(clamp);
+
+                // Copper induction winding on the clamp
+                const coil = new THREE.Mesh(
+                    new THREE.BoxGeometry(tubeRadius * 2.4, tubeRadius * 1.2, tubeRadius * 2.2),
+                    matCopperCoil
+                );
+                segGroup.add(coil);
+
+                // Glowing status strip on the outer edge
+                const led = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.05, tubeRadius * 2.0, tubeRadius * 0.8),
+                    i % 3 === 0 ? matGlowPrimary : matGlowSecondary
+                );
+                led.position.x = tubeRadius * 1.15;
+                segGroup.add(led);
+
+                gyroContainer.add(segGroup);
+
+                const radialDir = new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0);
+                registerExplodable(segGroup, radialDir, explodeRadius, title);
+            }
+
+            return gyroContainer;
+        }
+
+        const gyroRing1 = createSegmentedGyroRing(
+            2.15, 0.11, 12, 1.4,
+            'حلقه ژیروسکوپ داخلی (کنترل تکانه زاویه‌ای محور X)'
+        );
+        const gyroRing2 = createSegmentedGyroRing(
+            2.85, 0.14, 16, 2.0,
+            'حلقه ژیروسکوپ میانی (تثبیت‌کننده میدان مغناطیسی محور Y)'
+        );
+        const gyroRing3 = createSegmentedGyroRing(
+            3.55, 0.17, 20, 2.7,
+            'حلقه ژیروسکوپ بیرونی (سپر مهار نوسانات هارمونیک محور Z)'
+        );
+
+        // Give initial tilted orientations
+        gyroRing1.rotation.set(0.4, 0.2, 0.0);
+        gyroRing2.rotation.set(-0.3, 0.5, 0.4);
+        gyroRing3.rotation.set(0.2, -0.4, -0.3);
+
+        // ------------------------------------------
+        // D. OCTAGONAL MAGNETIC STATOR & TOROIDAL COILS
+        // ------------------------------------------
+        const numColumns = 8;
+        const statorRadius = 4.65;
+
+        for (let i = 0; i < numColumns; i++) {
+            const angle = (i / numColumns) * Math.PI * 2;
+            const colGroup = new THREE.Group();
+
+            const x = Math.cos(angle) * statorRadius;
+            const z = Math.sin(angle) * statorRadius;
+            colGroup.position.set(x, 0, z);
+            colGroup.rotation.y = -angle;
+
+            // 1. Main Vertical Heavy Spine
+            const spine = new THREE.Mesh(new THREE.BoxGeometry(0.65, 4.6, 0.75), matDarkTitanium);
+            spine.position.x = 0.35;
+            colGroup.add(spine);
+
+            // 2. Upper & Lower C-Shaped Magnetic Claws reaching inward
+            const topClaw = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.55, 0.65), matArmorCarbon);
+            topClaw.position.set(-0.2, 2.05, 0);
+            topClaw.rotation.z = 0.22;
+            colGroup.add(topClaw);
+
+            const botClaw = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.55, 0.65), matArmorCarbon);
+            botClaw.position.set(-0.2, -2.05, 0);
+            botClaw.rotation.z = -0.22;
+            colGroup.add(botClaw);
+
+            // 3. Copper Electromagnetic Winding Banks (Top & Bottom)
+            const topCoil = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.25, 16), matCopperCoil);
+            topCoil.position.set(-0.05, 1.05, 0);
+            colGroup.add(topCoil);
+
+            const botCoil = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.25, 16), matCopperCoil);
+            botCoil.position.set(-0.05, -1.05, 0);
+            colGroup.add(botCoil);
+
+            // 4. Central Plasma Flux Receiver Node (Facing the core)
+            const fluxNode = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.35, 0.5, 8), matBrushedSteel);
+            fluxNode.rotation.z = Math.PI / 2;
+            fluxNode.position.set(-0.25, 0, 0);
+            colGroup.add(fluxNode);
+
+            const fluxCrystal = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.55, 0.22), matGlowPrimary);
+            fluxCrystal.position.set(-0.5, 0, 0);
+            colGroup.add(fluxCrystal);
+
+            // 5. Twin Hydraulic Pistons on the sides of the spine
+            for (const side of [-0.42, 0.42]) {
+                const pistonCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.2, 10), matDarkTitanium);
+                pistonCyl.position.set(0.2, 0.9, side);
+                colGroup.add(pistonCyl);
+
+                const pistonRod = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 3.8, 10), matBrushedSteel);
+                pistonRod.position.set(0.2, 0, side);
+                colGroup.add(pistonRod);
+            }
+
+            // 6. Stacked Heat-Sink Radiator Fins on the exterior back
+            const radiatorGroup = new THREE.Group();
+            for (let f = -5; f <= 5; f++) {
+                const fin = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.06, 0.95), matBrushedSteel);
+                fin.position.set(0.82, f * 0.32, 0);
+                radiatorGroup.add(fin);
+            }
+            // Glowing vertical coolant bar cutting through the fins
+            const coolantPipe = new THREE.Mesh(new THREE.BoxGeometry(0.12, 3.4, 1.02), matGlowSecondary);
+            coolantPipe.position.set(0.95, 0, 0);
+            radiatorGroup.add(coolantPipe);
+
+            colGroup.add(radiatorGroup);
+
+            // Register radiator sub-assembly to explode even further out than the column!
+            registerExplodable(
+                radiatorGroup,
+                new THREE.Vector3(1, 0, 0),
+                1.35,
+                `رادیاتور خنک‌کننده مایع و پره‌های حرارتی ستون #${i + 1}`
+            );
+
+            layers.stator.add(colGroup);
+
+            const radialOut = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
+            registerExplodable(
+                colGroup,
+                radialOut,
+                2.8,
+                `ستون استاتور الکترومغناطیسی و سیم‌پیچ توروئیدی #${i + 1}`
+            );
+        }
+
+        // ------------------------------------------
+        // E. UPPER CONTAINMENT CROWN & LOWER PEDESTAL
+        // ------------------------------------------
+        function createContainmentRingAssembly(isUpper) {
+            const sign = isUpper ? 1 : -1;
+            const ringGroup = new THREE.Group();
+            ringGroup.position.set(0, sign * 3.1, 0);
+
+            // Main Octagonal/Circular Heavy Ring
+            const mainTorus = new THREE.Mesh(
+                new THREE.TorusGeometry(4.45, 0.24, 16, 64),
+                matArmorCarbon
+            );
+            mainTorus.rotation.x = Math.PI / 2;
+            ringGroup.add(mainTorus);
+
+            // Glowing Neon Ring Liner
+            const neonLiner = new THREE.Mesh(
+                new THREE.TorusGeometry(4.18, 0.05, 12, 64),
+                matGlowPrimary
+            );
+            neonLiner.rotation.x = Math.PI / 2;
+            ringGroup.add(neonLiner);
+
+            // 8 Heavy Mechanical Locking Shoes
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.45, 0.75), matBrushedSteel);
+                shoe.position.set(Math.cos(angle) * 4.45, 0, Math.sin(angle) * 4.45);
+                shoe.rotation.y = -angle;
+                ringGroup.add(shoe);
+            }
+
+            layers.stator.add(ringGroup);
+            registerExplodable(
+                ringGroup,
+                new THREE.Vector3(0, sign, 0),
+                2.2,
+                isUpper ? 'تاج مهار مغناطیسی فوقانی (Upper Stator Crown)' : 'شاسی و حلقه پایه نگهدارنده تحتانی (Lower Pedestal Ring)'
+            );
+            return ringGroup;
+        }
+
+        createContainmentRingAssembly(true);
+        createContainmentRingAssembly(false);
+
+        // ------------------------------------------
+        // F. HOLOGRAPHIC FLOOR GRID & ORBITAL PARTICLES
+        // ------------------------------------------
+        const floorGroup = new THREE.Group();
+        floorGroup.position.y = -4.8;
+        scene.add(floorGroup);
+
+        const polarGrid = new THREE.PolarGridHelper(11, 16, 8, 64, 0x1e3a8a, 0x0f172a);
+        polarGrid.material.transparent = true;
+        polarGrid.material.opacity = 0.45;
+        floorGroup.add(polarGrid);
+
+        // Glowing Floor Energy Ring
+        const floorNeonRing = new THREE.Mesh(
+            new THREE.RingGeometry(4.4, 4.48, 64),
+            new THREE.MeshBasicMaterial({ color: 0x00f2fe, side: THREE.DoubleSide })
+        );
+        floorNeonRing.rotation.x = -Math.PI / 2;
+        floorNeonRing.position.y = 0.02;
+        floorGroup.add(floorNeonRing);
+
+        // Floating Orbital Quantum Particles
+        const particlesCount = 450;
+        const particlePositions = new Float32Array(particlesCount * 3);
+        const particlePhase = new Float32Array(particlesCount);
+
+        for (let i = 0; i < particlesCount; i++) {
+            const r = 1.6 + Math.random() * 4.5;
+            const theta = Math.random() * Math.PI * 2;
+            const y = (Math.random() - 0.5) * 5.0;
+
+            particlePositions[i * 3] = Math.cos(theta) * r;
+            particlePositions[i * 3 + 1] = y;
+            particlePositions[i * 3 + 2] = Math.sin(theta) * r;
+            particlePhase[i] = Math.random() * Math.PI * 2;
+        }
+
+        const particlesGeo = new THREE.BufferGeometry();
+        particlesGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+
+        const particlesMat = new THREE.PointsMaterial({
+            color: 0x00f2fe,
+            size: 0.075,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+
+        const particleSystem = new THREE.Points(particlesGeo, particlesMat);
+        scene.add(particleSystem);
+
+        // Calculate total triangles and display in telemetry
+        function updatePolygonCount() {
+            let tris = 0;
+            scene.traverse((obj) => {
+                if (obj.isMesh && obj.geometry) {
+                    if (obj.geometry.index) {
+                        tris += obj.geometry.index.count / 3;
+                    } else if (obj.geometry.attributes.position) {
+                        tris += obj.geometry.attributes.position.count / 3;
+                    }
+                }
+            });
+            document.getElementById('poly-count').textContent = Math.round(tris).toLocaleString('en-US');
+        }
+        updatePolygonCount();
+
+        // ==========================================
+        // 6. INTERACTIVE RAYCASTER (PART INSPECTOR)
+        // ==========================================
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        const inspectorText = document.getElementById('inspector-text');
+
+        window.addEventListener('pointermove', (e) => {
+            pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+            pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(pointer, camera);
+            const intersects = raycaster.intersectObjects(interactiveMeshes, false);
+
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                if (hit.userData.partTitle) {
+                    inspectorText.textContent = hit.userData.partTitle;
+                }
+            } else {
+                inspectorText.textContent = 'ماوس را روی اجزای راکتور ببرید تا مشخصات فنی نمایش داده شود';
+            }
+        });
+
+        // ==========================================
+        // 7. UI CONTROLS & EVENT LISTENERS
+        // ==========================================
+        const sliderExplode = document.getElementById('slider-explode');
+        const valExplode = document.getElementById('val-explode');
+        const btnQuickExplode = document.getElementById('btn-quick-explode');
+
+        function setExplodeTarget(valPercent) {
+            sliderExplode.value = valPercent;
+            valExplode.textContent = `${Math.round(valPercent)}%`;
+            state.explodeTarget = valPercent / 100;
+            btnQuickExplode.textContent = valPercent > 50 ? 'بستن قطعات' : 'باز کردن قطعات';
+        }
+
+        sliderExplode.addEventListener('input', (e) => {
+            setExplodeTarget(parseFloat(e.target.value));
+        });
+
+        btnQuickExplode.addEventListener('click', () => {
+            setExplodeTarget(state.explodeTarget > 0.5 ? 0 : 85);
+        });
+
+        // Core Power Slider
+        const sliderPower = document.getElementById('slider-power');
+        const valPower = document.getElementById('val-power');
+        sliderPower.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            valPower.textContent = `${Math.round(val)}%`;
+            state.powerLevel = val / 100;
+        });
+
+        // Bloom Slider
+        const sliderBloom = document.getElementById('slider-bloom');
+        const valBloom = document.getElementById('val-bloom');
+        sliderBloom.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value) / 100;
+            valBloom.textContent = val.toFixed(2);
+            state.bloomStrength = val;
+            bloomPass.strength = val;
+        });
+
+        // Render Mode Buttons (PBR / Wireframe / X-Ray)
+        const modeButtons = document.querySelectorAll('.btn-mode');
+        modeButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                modeButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const mode = btn.getAttribute('data-mode');
+                state.renderMode = mode;
+
+                standardMaterials.forEach((mat) => {
+                    if (mode === 'pbr') {
+                        mat.wireframe = false;
+                        mat.transparent = mat.userData.origConfig.transparent;
+                        mat.opacity = mat.userData.origConfig.opacity;
+                        mat.depthWrite = true;
+                        mat.blending = THREE.NormalBlending;
+                    } else if (mode === 'wireframe') {
+                        mat.wireframe = true;
+                        mat.transparent = false;
+                        mat.opacity = 1.0;
+                        mat.depthWrite = true;
+                        mat.blending = THREE.NormalBlending;
+                    } else if (mode === 'xray') {
+                        mat.wireframe = false;
+                        mat.transparent = true;
+                        mat.opacity = 0.16;
+                        mat.depthWrite = false;
+                        mat.blending = THREE.AdditiveBlending;
+                    }
+                    mat.needsUpdate = true;
+                });
+            });
+        });
+
+        // Layer Visibility Checkboxes
+        document.querySelectorAll('.layer-toggle').forEach((checkbox) => {
+            checkbox.addEventListener('change', (e) => {
+                const layerName = e.target.getAttribute('data-layer');
+                if (layers[layerName]) {
+                    layers[layerName].visible = e.target.checked;
+                }
+            });
+        });
+
+        // Color Theme Switcher
+        const themeButtons = document.querySelectorAll('.theme-btn');
+        themeButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                themeButtons.forEach((b) => {
+                    b.classList.remove('border-white');
+                    b.classList.add('border-transparent', 'opacity-80');
+                });
+                btn.classList.remove('border-transparent', 'opacity-80');
+                btn.classList.add('border-white');
+
+                const themeKey = btn.getAttribute('data-theme');
+                const t = themes[themeKey];
+                state.activeTheme = themeKey;
+
+                // Update CSS variables
+                document.documentElement.style.setProperty('--theme-color', t.cssHex);
+                document.documentElement.style.setProperty('--theme-glow', t.cssGlow);
+
+                // Update 3D Shaders, Lights, and Emissive Materials
+                plasmaUniforms.uColorPrimary.value.copy(t.primary);
+                plasmaUniforms.uColorSecondary.value.copy(t.secondary);
+                coreLight.color.copy(t.primary);
+                particlesMat.color.copy(t.primary);
+                floorNeonRing.material.color.copy(t.primary);
+
+                emissivePrimaryMaterials.forEach((m) => {
+                    m.color.copy(t.primary);
+                    m.emissive.copy(t.primary);
+                });
+                emissiveSecondaryMaterials.forEach((m) => {
+                    m.color.copy(t.secondary);
+                    m.emissive.copy(t.secondary);
+                });
+            });
+        });
+
+        // Camera Presets
+        const cameraPresets = {
+            overview: { pos: new THREE.Vector3(10.5, 6.2, 12.0), look: new THREE.Vector3(0, 0, 0) },
+            core:     { pos: new THREE.Vector3(2.9, 1.1, 3.4),   look: new THREE.Vector3(0, 0, 0) },
+            polar:    { pos: new THREE.Vector3(0.1, 14.5, 0.1),  look: new THREE.Vector3(0, 0, 0) },
+            side:     { pos: new THREE.Vector3(13.5, 0.2, 0.0),  look: new THREE.Vector3(0, 0, 0) }
+        };
+
+        document.querySelectorAll('.cam-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const preset = cameraPresets[btn.getAttribute('data-cam')];
+                if (preset) {
+                    state.cameraTargetPos.copy(preset.pos);
+                    state.cameraTargetLook.copy(preset.look);
+                    state.cameraLerpActive = true;
+                }
+            });
+        });
+
+        // Top Bar Action Buttons
+        const btnPulse = document.getElementById('btn-pulse');
+        btnPulse.addEventListener('click', () => {
+            state.pulseEnergy = 1.6;
+        });
+
+        const btnAutoRotate = document.getElementById('btn-autorotate');
+        btnAutoRotate.addEventListener('click', () => {
+            state.autoRotate = !state.autoRotate;
+            controls.autoRotate = state.autoRotate;
+            btnAutoRotate.textContent = `چرخش خودکار: ${state.autoRotate ? 'روشن' : 'خاموش'}`;
+        });
+
+        const btnToggleUI = document.getElementById('btn-toggle-ui');
+        let uiVisible = true;
+        btnToggleUI.addEventListener('click', () => {
+            uiVisible = !uiVisible;
+            const panels = ['panel-controls', 'panel-telemetry', 'panel-footer'];
+            panels.forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) el.style.opacity = uiVisible ? '1' : '0';
+                if (el) el.style.pointerEvents = uiVisible ? 'auto' : 'none';
+            });
+        });
+
+        // Window Resize Handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ==========================================
+        // 8. ANIMATION LOOP & LIVE TELEMETRY
+        // ==========================================
+        const clock = new THREE.Clock();
+        let frameCount = 0;
+        let lastFpsUpdate = performance.now();
+
+        const elFps = document.getElementById('fps-counter');
+        const elMw = document.getElementById('tele-mw');
+        const elTesla = document.getElementById('tele-tesla');
+        const elRpm = document.getElementById('tele-rpm');
+        const elTemp = document.getElementById('tele-temp');
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = Math.min(clock.getDelta(), 0.1);
+            const elapsed = clock.getElapsedTime();
+
+            // Decay plasma shockwave pulse
+            if (state.pulseEnergy > 0.001) {
+                state.pulseEnergy *= Math.pow(0.08, delta);
+            } else {
+                state.pulseEnergy = 0;
+            }
+
+            const effectivePower = state.powerLevel + state.pulseEnergy * 1.5;
+
+            // 1. Update Plasma Core Shader & Point Light
+            plasmaUniforms.uTime.value = elapsed * (0.8 + effectivePower * 0.4);
+            plasmaUniforms.uPower.value = effectivePower;
+
+            const pulseScale = 1.0 + Math.sin(elapsed * 6.0 * effectivePower) * 0.035 * effectivePower + state.pulseEnergy * 0.18;
+            plasmaMesh.scale.setScalar(pulseScale);
+            coreLight.intensity = (16 + Math.sin(elapsed * 10.0) * 3) * effectivePower;
+            bloomPass.strength = state.bloomStrength + state.pulseEnergy * 0.9;
+
+            // 2. Multi-Axis Gyroscopic Rings Rotation
+            const rotSpeed = delta * effectivePower * 1.15;
+            gyroRing1.rotation.x += rotSpeed * 1.45;
+            gyroRing1.rotation.y += rotSpeed * 0.85;
+
+            gyroRing2.rotation.y -= rotSpeed * 1.1;
+            gyroRing2.rotation.z += rotSpeed * 0.75;
+
+            gyroRing3.rotation.z -= rotSpeed * 0.65;
+            gyroRing3.rotation.x += rotSpeed * 0.4;
+
+            // Rotate geodesic cage slowly in opposite directions
+            cageTop.rotation.y -= rotSpeed * 0.5;
+            cageBottom.rotation.y += rotSpeed * 0.5;
+
+            // 3. Smooth Exploded View Interpolation
+            state.explodeCurrent += (state.explodeTarget - state.explodeCurrent) * 0.08;
+            for (let i = 0; i < explodableParts.length; i++) {
+                const part = explodableParts[i];
+                const offset = part.userData.explodeDist * state.explodeCurrent;
+                part.position.copy(part.userData.basePos).addScaledVector(part.userData.explodeDir, offset);
+            }
+
+            // 4. Orbital Quantum Particles Animation
+            particleSystem.rotation.y = elapsed * 0.18 * effectivePower;
+            const posArray = particlesGeo.attributes.position.array;
+            for (let i = 0; i < particlesCount; i++) {
+                posArray[i * 3 + 1] += Math.sin(elapsed * 2.0 + particlePhase[i]) * 0.004 * effectivePower;
+            }
+            particlesGeo.attributes.position.needsUpdate = true;
+
+            // 5. Smooth Camera Preset Transition
+            if (state.cameraLerpActive) {
+                camera.position.lerp(state.cameraTargetPos, 0.07);
+                controls.target.lerp(state.cameraTargetLook, 0.07);
+                if (camera.position.distanceTo(state.cameraTargetPos) < 0.05) {
+                    state.cameraLerpActive = false;
+                }
+            }
+
+            controls.update();
+
+            // 6. Update Telemetry Counter & Metrics every ~250ms
+            frameCount++;
+            const now = performance.now();
+            if (now - lastFpsUpdate >= 250) {
+                const fps = Math.round((frameCount * 1000) / (now - lastFpsUpdate));
+                elFps.textContent = `${fps} FPS`;
+
+                const jitter = (Math.random() - 0.5) * 12;
+                elMw.textContent = Math.round(1420 * effectivePower + jitter).toLocaleString('en-US');
+                elTesla.textContent = (48.6 * effectivePower + (Math.random() - 0.5) * 0.4).toFixed(1);
+                elRpm.textContent = Math.round(12800 * effectivePower + jitter * 5).toLocaleString('en-US');
+                elTemp.textContent = (154.2 * Math.pow(effectivePower, 0.6) + (Math.random() - 0.5) * 0.5).toFixed(1);
+
+                frameCount = 0;
+                lastFpsUpdate = now;
+            }
+
+            // Render via Post-Processing EffectComposer
+            composer.render();
+        }
+
+        window.onload = function () {
+            animate();
+        };
+    </script>
+</body>
+</html>
